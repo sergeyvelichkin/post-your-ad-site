@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import './App.css';
+import { CanvasBoard } from './features/canvas/CanvasBoard';
 
 interface SpotlightMessage {
   id: string;
@@ -31,6 +32,15 @@ const demoMessages: SpotlightMessage[] = [
 
 export default function App(): JSX.Element {
   const [messages] = useState(demoMessages);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+
+  const handleLaunchCanvas = (): void => {
+    const target = boardRef.current;
+
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -46,7 +56,7 @@ export default function App(): JSX.Element {
         <div className="cta-panel">
           <p>Create anonymously or claim a profile to unlock analytics, board ownership, and payouts.</p>
           <div className="cta-panel__actions">
-            <button type="button" className="cta-panel__primary">
+            <button type="button" className="cta-panel__primary" onClick={handleLaunchCanvas}>
               Launch Canvas
             </button>
             <button type="button" className="cta-panel__secondary">
@@ -55,6 +65,10 @@ export default function App(): JSX.Element {
           </div>
         </div>
       </header>
+
+      <div ref={boardRef} className="canvas-section">
+        <CanvasBoard />
+      </div>
 
       <main className="preview">
         <section className="preview__board">

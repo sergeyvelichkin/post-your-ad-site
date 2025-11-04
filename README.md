@@ -38,7 +38,8 @@ Environment variables for the API live in `.env`; see [`apps/api/.env.example`](
 
 ## What’s Ready
 - React front door that frames the value prop, monetization tiers, and CTA copy for early adopters.
-- Fastify backend shell with env validation, health check, and mocked board pricing endpoints.
+- Anonymous session-aware Fastify API with env validation, health check, mocked board pricing, and canvas event endpoints (in-memory store with rate limiting).
+- Live canvas prototype that lets visitors draw strokes, drop notes, and see aggregates instantly.
 - Shared tooling: Turbo, ESLint (type-aware), Prettier, Vitest setups, and Testing Library for UI.
 - PR / issue templates aligned with self-review discipline and discovery-first workflow.
 

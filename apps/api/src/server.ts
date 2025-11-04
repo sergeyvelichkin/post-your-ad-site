@@ -6,6 +6,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { env } from './env.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerBoardRoutes } from './routes/boards.js';
+import sessionPlugin from './plugins/session.js';
 
 export const buildServer = (): FastifyInstance => {
   const server = Fastify({
@@ -18,6 +19,7 @@ export const buildServer = (): FastifyInstance => {
     }
   }).withTypeProvider<ZodTypeProvider>();
 
+  void server.register(sessionPlugin);
   void server.register(cors, {
     origin: env.WEB_ORIGIN ?? true,
     credentials: true

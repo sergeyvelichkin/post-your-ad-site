@@ -8,7 +8,13 @@ const envSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
-  WEB_ORIGIN: z.string().url().optional()
+  WEB_ORIGIN: z.string().url().optional(),
+  SESSION_COOKIE_NAME: z
+    .string()
+    .min(4)
+    .max(64)
+    .default('pyas_session'),
+  CANVAS_ADMIN_TOKEN: z.string().min(8).optional()
 });
 
 const parsed = envSchema.safeParse(process.env);

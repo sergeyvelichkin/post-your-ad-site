@@ -1,5 +1,12 @@
 import type { FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
+import { env } from '../env.js';
+import {
+  appendCanvasEvent,
+  CanvasRateLimitError,
+  clearCanvasEvents,
+  listCanvasEvents
+} from '../modules/canvas/canvas-store.js';
 
 const placementTierSchema = z.object({
   id: z.string(),
@@ -18,6 +25,65 @@ const boardSlugParamSchema = z.object({ slug: z.string() });
 const quoteBodySchema = z.object({
   tierId: z.string(),
   days: z.number().min(1).max(30)
+});
+
+const canvasPointSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1)
+});
+
+const canvasDrawPayloadSchema = z.object({
+  color: z
+    .string()
+    .min(3)
+    .max(24),
+  strokeWidth: z.number().min(1).max(32),
+  points: z.array(canvasPointSchema).min(2).max(400)
+});
+
+const canvasTextPayloadSchema = z.object({
+  text: z.string().min(1).max(280),
+  color: z
+    .string()
+    .min(3)
+    .max(24),
+  fontSize: z.number().min(12).max(72),
+  position: canvasPointSchema
+});
+
+const createCanvasEventSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('draw'),
+    payload: canvasDrawPayloadSchema
+  }),
+  z.object({
+    type: z.literal('text'),
+    payload: canvasTextPayloadSchema
+  })
+]);
+
+const canvasEventSchema = z.discriminatedUnion('type', [
+  z.object({
+    id: z.string(),
+    boardId: z.string(),
+    createdAt: z.string(),
+    authorSessionId: z.string(),
+    type: z.literal('draw'),
+    payload: canvasDrawPayloadSchema
+  }),
+  z.object({
+    id: z.string(),
+    boardId: z.string(),
+    createdAt: z.string(),
+    authorSessionId: z.string(),
+    type: z.literal('text'),
+    payload: canvasTextPayloadSchema
+  })
+]);
+
+const canvasEventsResponseSchema = z.object({
+  boardId: z.string(),
+  events: z.array(canvasEventSchema)
 });
 
 const boardListResponseSchema = z.object({
@@ -209,6 +275,67 @@ export const registerBoardRoutes: FastifyPluginCallback = (app, _opts, done) => 
         serviceFee
       }
     });
+  });
+
+  app.get('/boards/:slug/canvas/events', (request, reply) => {
+    const { slug } = boardSlugParamSchema.parse(request.params);
+    const board = findBoardBySlug(slug);
+
+    if (!board) {
+      return reply.code(404).send({ message: 'Board not found' });
+    }
+
+    const events = listCanvasEvents(slug);
+
+    return canvasEventsResponseSchema.parse({
+      boardId: slug,
+      events
+    });
+  });
+
+  app.post('/boards/:slug/canvas/events', (request, reply) => {
+    const { slug } = boardSlugParamSchema.parse(request.params);
+    const board = findBoardBySlug(slug);
+
+    if (!board) {
+      return reply.code(404).send({ message: 'Board not found' });
+    }
+
+    const body = createCanvasEventSchema.parse(request.body);
+
+    try {
+      const event = appendCanvasEvent(slug, request.sessionId, body);
+      void reply.code(201);
+      return canvasEventSchema.parse(event);
+    } catch (error) {
+      if (error instanceof CanvasRateLimitError) {
+        return reply.code(429).send({ message: error.message });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post('/boards/:slug/canvas/clear', (request, reply) => {
+    const { slug } = boardSlugParamSchema.parse(request.params);
+    const board = findBoardBySlug(slug);
+
+    if (!board) {
+      return reply.code(404).send({ message: 'Board not found' });
+    }
+
+    if (!env.CANVAS_ADMIN_TOKEN) {
+      return reply.code(501).send({ message: 'Admin clear not configured' });
+    }
+
+    const providedToken = request.headers['x-admin-token'];
+
+    if (providedToken !== env.CANVAS_ADMIN_TOKEN) {
+      return reply.code(403).send({ message: 'Forbidden' });
+    }
+
+    clearCanvasEvents(slug);
+    return reply.code(204).send();
   });
 
   done();

@@ -13,8 +13,8 @@
 
 ## Request / Event Flows
 1. **Anonymous Post (Free Tier)**
-   - Client collects stroke/text payload → REST `POST /canvas-events` (auth optional).
-   - API validates payload (zod) and stores event log.
+   - Client collects stroke/text payload → REST `POST /boards/:slug/canvas/events` (auth optional).
+   - API validates payload (zod) and stores event log (in-memory for MVP, PostgreSQL later).
    - Event is published to Redis channel → broadcast to connected clients.
    - Nightly job prunes expired events and generates board snapshots for SEO.
 
@@ -38,6 +38,7 @@
   - Routing (Fastify) with typed schemas via zod provider.
   - Modules: auth, boards, pricing, placements, orders, payouts, moderation.
   - Cross-cutting: logging (pino), metrics (Prometheus exporter), error handling, rate limiting middleware.
+  - MVP Canvas: in-memory event store with session-scoped rate limits; swaps to Postgres + Redis later.
   - Testing: Vitest unit/integration + k6 load profile (planned).
 - `packages`
   - Shared TypeScript configs today; future: shared types (`@post-your-ad/types`), SDK clients, UI kit.
@@ -51,6 +52,7 @@
 
 ## Security & Compliance Considerations
 - Optional auth with JWT + refresh tokens; anonymous sessions tracked with signed cookies.
+- Anonymous canvas sessions rely on httpOnly cookies (`SESSION_COOKIE_NAME`) and per-session rate limits to curb spam.
 - Spam controls: captcha fallback, rate limiting, moderation queue.
 - Payment compliance: PCI handled by Stripe; store only references/receipts.
 - Data retention: purge anonymous content per retention policy; GDPR/CCPA data export pipeline.

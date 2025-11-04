@@ -15,8 +15,10 @@
   "dependencies": {
     "@fastify/cors": "^8.4.2",
     "@fastify/websocket": "^8.3.0",
+    "@fastify/cookie": "^9.2.0",
     "dotenv": "^16.3.1",
     "fastify": "^4.25.2",
+    "fastify-plugin": "^4.5.1",
     "fastify-type-provider-zod": "^2.1.0",
     "pino": "^8.16.0",
     "zod": "^3.22.4"
