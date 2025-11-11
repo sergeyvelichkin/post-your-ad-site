@@ -1,19 +1,194 @@
-:root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color-scheme: light dark;
-  color: #0f172a;
-  background-color: #f8fafc;
-}
-
-* {
-  box-sizing: border-box;
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
 body {
-  margin: 0;
-  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f1f5f9;
 }
 
-#root {
-  min-height: 100vh;
+.canvas-app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f1f5f9;
+}
+
+.canvas-app__nav {
+  height: 72px;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #0f172a;
+  color: #f8fafc;
+  box-shadow: 0 4px 16px -10px rgba(15, 23, 42, 0.45);
+}
+
+.canvas-app__brand {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.canvas-app__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.8);
+}
+
+.canvas-app__stage-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at top, rgba(148, 163, 184, 0.25), rgba(226, 232, 240, 0.45));
+}
+
+.canvas-app__stage {
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+}
+
+.tool-panel {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 18px;
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 18px 35px -20px rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.tool-panel__drag-hint {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.tool-panel__drag-handle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: rgba(226, 232, 240, 0.9);
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.tool-panel__tools {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tool-panel__icon-button {
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  color: #0f172a;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.tool-panel__icon-button--active {
+  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+  box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.2), 0 8px 18px -12px rgba(79, 70, 229, 0.45);
+}
+
+.tool-panel__icon-button span[aria-hidden='true'] {
+  width: 100%;
+  text-align: center;
+}
+
+.tool-panel__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.tool-panel__divider {
+  width: 1px;
+  height: 48px;
+  background-color: rgba(15, 23, 42, 0.1);
+}
+
+.tool-panel__controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  color: #1f2937;
+}
+
+.tool-panel__inline-field {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+}
+
+.tool-panel__inline-field span {
+  min-width: 40px;
+}
+
+.tool-panel__inline-field input[type='color'] {
+  border: none;
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.tool-panel__inline-field select {
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  padding: 0.35rem 0.9rem 0.35rem 0.5rem;
+  background: #fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8"><path fill="%236b7280" d="M0 0h12L6 8z"/></svg>') no-repeat right 0.5rem center / 12px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  appearance: none;
+}
+
+.tool-panel__inline-field--text input[type='text'] {
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background-color: rgba(15, 23, 42, 0.04);
+  color: #0f172a;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+}
+
+.tool-panel__icon-button--upload {
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-panel__icon-button--upload input[type='file'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }

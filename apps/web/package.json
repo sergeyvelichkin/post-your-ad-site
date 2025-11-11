@@ -13,17 +13,21 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "konva": "^9.2.3",
+    "phosphor-react": "^1.4.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-konva": "^18.2.10",
+    "use-image": "^1.0.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.6",
     "@testing-library/react": "^14.1.2",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
-    "@vitejs/plugin-react": "^4.2.1",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",

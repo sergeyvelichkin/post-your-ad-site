@@ -28,6 +28,10 @@
 - Prefer `vitest` integration tests for HTTP endpoints; avoid hitting live Stripe in unit tests.
 - Keep feature flags in `apps/api/src/config/flags.ts` (planned) for toggling experiments.
 - Canvas MVP stores events in-memory; expect reset on server restart. Tests use the shared reset helper in `canvas-store`.
+- Canvas mutation routes:
+  - Update event: `PATCH /api/boards/:slug/canvas/events/:eventId`
+  - Delete event: `DELETE /api/boards/:slug/canvas/events/:eventId`
+  - Update appearance: `PATCH /api/boards/:slug/canvas/appearance`
 
 ## Quality Gates
 - Every PR must pass lint, typecheck, tests.

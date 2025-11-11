@@ -5,7 +5,10 @@ import {
   appendCanvasEvent,
   CanvasRateLimitError,
   clearCanvasEvents,
-  listCanvasEvents
+  deleteCanvasEvent,
+  getCanvasState,
+  setBoardAppearance,
+  updateCanvasEvent
 } from '../modules/canvas/canvas-store.js';
 
 const placementTierSchema = z.object({
@@ -83,7 +86,16 @@ const canvasEventSchema = z.discriminatedUnion('type', [
 
 const canvasEventsResponseSchema = z.object({
   boardId: z.string(),
-  events: z.array(canvasEventSchema)
+  events: z.array(canvasEventSchema),
+  appearance: z.object({
+    backgroundColor: z.string().min(3).max(24)
+  })
+});
+
+const updateCanvasEventSchema = createCanvasEventSchema;
+
+const appearanceUpdateSchema = z.object({
+  backgroundColor: z.string().min(3).max(24)
 });
 
 const boardListResponseSchema = z.object({
@@ -285,11 +297,12 @@ export const registerBoardRoutes: FastifyPluginCallback = (app, _opts, done) => 
       return reply.code(404).send({ message: 'Board not found' });
     }
 
-    const events = listCanvasEvents(slug);
+    const state = getCanvasState(slug);
 
     return canvasEventsResponseSchema.parse({
       boardId: slug,
-      events
+      events: state.events,
+      appearance: state.appearance
     });
   });
 
@@ -314,6 +327,64 @@ export const registerBoardRoutes: FastifyPluginCallback = (app, _opts, done) => 
 
       throw error;
     }
+  });
+
+  app.patch('/boards/:slug/canvas/events/:eventId', (request, reply) => {
+    const { slug, eventId } = boardSlugParamSchema
+      .extend({ eventId: z.string() })
+      .parse(request.params);
+    const board = findBoardBySlug(slug);
+
+    if (!board) {
+      return reply.code(404).send({ message: 'Board not found' });
+    }
+
+    const body = updateCanvasEventSchema.parse(request.body);
+
+    try {
+      const updated = updateCanvasEvent(slug, eventId, body);
+
+      if (!updated) {
+        return reply.code(404).send({ message: 'Event not found' });
+      }
+
+      return canvasEventSchema.parse(updated);
+    } catch (error) {
+      return reply.code(400).send({ message: error instanceof Error ? error.message : 'Invalid update' });
+    }
+  });
+
+  app.delete('/boards/:slug/canvas/events/:eventId', (request, reply) => {
+    const { slug, eventId } = boardSlugParamSchema
+      .extend({ eventId: z.string() })
+      .parse(request.params);
+    const board = findBoardBySlug(slug);
+
+    if (!board) {
+      return reply.code(404).send({ message: 'Board not found' });
+    }
+
+    const removed = deleteCanvasEvent(slug, eventId);
+
+    if (!removed) {
+      return reply.code(404).send({ message: 'Event not found' });
+    }
+
+    return reply.code(204).send();
+  });
+
+  app.patch('/boards/:slug/canvas/appearance', (request, reply) => {
+    const { slug } = boardSlugParamSchema.parse(request.params);
+    const board = findBoardBySlug(slug);
+
+    if (!board) {
+      return reply.code(404).send({ message: 'Board not found' });
+    }
+
+    const body = appearanceUpdateSchema.parse(request.body);
+    const appearance = setBoardAppearance(slug, body);
+
+    return appearanceUpdateSchema.parse(appearance);
   });
 
   app.post('/boards/:slug/canvas/clear', (request, reply) => {

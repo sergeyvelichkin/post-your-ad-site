@@ -38,7 +38,7 @@
   - Routing (Fastify) with typed schemas via zod provider.
   - Modules: auth, boards, pricing, placements, orders, payouts, moderation.
   - Cross-cutting: logging (pino), metrics (Prometheus exporter), error handling, rate limiting middleware.
-  - MVP Canvas: in-memory event store with session-scoped rate limits; swaps to Postgres + Redis later.
+  - MVP Canvas: in-memory event store with session-scoped rate limits, event mutation (update/delete), and board appearance state; swaps to Postgres + Redis later.
   - Testing: Vitest unit/integration + k6 load profile (planned).
 - `packages`
   - Shared TypeScript configs today; future: shared types (`@post-your-ad/types`), SDK clients, UI kit.
@@ -53,6 +53,7 @@
 ## Security & Compliance Considerations
 - Optional auth with JWT + refresh tokens; anonymous sessions tracked with signed cookies.
 - Anonymous canvas sessions rely on httpOnly cookies (`SESSION_COOKIE_NAME`) and per-session rate limits to curb spam.
+- Event mutation endpoints (update/delete/background) require matching event types and session IDs for auditability.
 - Spam controls: captcha fallback, rate limiting, moderation queue.
 - Payment compliance: PCI handled by Stripe; store only references/receipts.
 - Data retention: purge anonymous content per retention policy; GDPR/CCPA data export pipeline.
