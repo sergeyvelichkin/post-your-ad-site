@@ -62,5 +62,5 @@ export type IconRenderer = (props: IconProps) => JSX.Element;
 
 export const NAV_HEIGHT = 72;
 export const PANEL_WIDTH = 720;
-export const PANEL_HEIGHT = 80;
+export const PANEL_HEIGHT = 60;
 export const MAX_IMAGE_SIZE = 220;

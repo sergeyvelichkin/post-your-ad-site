@@ -1,4 +1,4 @@
-import { PencilSimple, Square, TextT, ImageSquare, UploadSimple } from 'phosphor-react';
+import { PencilSimple, Square, TextT, ImageSquare, UploadSimple, Eyedropper } from 'phosphor-react';
 import type { ChangeEventHandler, PointerEvent as ReactPointerEvent } from 'react';
 import type { Tool, IconRenderer } from '../types';
 
@@ -80,12 +80,12 @@ export function Toolbar({
       </div>
       <div className="tool-panel__divider" />
       <div className="tool-panel__controls">
-        <label className="tool-panel__inline-field" title="Stroke color">
-          <span>Line</span>
+        <label className="tool-panel__icon-button tool-panel__icon-button--color" title="Stroke color">
+          <Eyedropper size={18} weight="bold" aria-hidden="true" />
+          <span className="tool-panel__sr-only">Stroke color</span>
           <input type="color" value={strokeColor} onChange={(event) => onStrokeColorChange(event.target.value)} />
         </label>
-        <label className="tool-panel__inline-field" title="Stroke width">
-          <span>Width</span>
+        <div className="tool-panel__select" title="Stroke width">
           <select value={strokeWidth} onChange={(event) => onStrokeWidthChange(Number(event.target.value))}>
             {strokeWidthOptions.map((value) => (
               <option key={value} value={value}>
@@ -93,13 +93,8 @@ export function Toolbar({
               </option>
             ))}
           </select>
-        </label>
-        <label className="tool-panel__inline-field tool-panel__inline-field--text">
-          <span>Text</span>
-          <input type="text" value={textValue} onChange={(event) => onTextValueChange(event.target.value)} placeholder="Caption" />
-        </label>
-        <label className="tool-panel__inline-field" title="Font size">
-          <span>Size</span>
+        </div>
+        <div className="tool-panel__select" title="Font size">
           <select value={fontSize} onChange={(event) => onFontSizeChange(Number(event.target.value))}>
             {fontSizeOptions.map((value) => (
               <option key={value} value={value}>
@@ -107,17 +102,29 @@ export function Toolbar({
               </option>
             ))}
           </select>
-        </label>
+        </div>
+        <input
+          className="tool-panel__text-input"
+          type="text"
+          value={textValue}
+          onChange={(event) => onTextValueChange(event.target.value)}
+          placeholder="Aa"
+          title="Text content"
+        />
         <label className="tool-panel__icon-button tool-panel__icon-button--upload" title="Upload image">
           <UploadSimple size={20} weight="bold" aria-hidden="true" />
           <span className="tool-panel__sr-only">{pendingImageTitle ? 'Replace image' : 'Upload image'}</span>
           <input type="file" accept="image/*" onChange={onFileChange} />
         </label>
         {pendingImageTitle ? (
-          <label className="tool-panel__inline-field tool-panel__inline-field--text" title="Image title">
-            <span>Title</span>
-            <input type="text" value={pendingImageTitle} onChange={(event) => onPendingImageTitleChange(event.target.value)} />
-          </label>
+          <input
+            className="tool-panel__text-input"
+            type="text"
+            value={pendingImageTitle}
+            onChange={(event) => onPendingImageTitleChange(event.target.value)}
+            placeholder="Image title"
+            title="Image title"
+          />
         ) : null}
       </div>
     </div>
