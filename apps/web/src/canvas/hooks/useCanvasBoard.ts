@@ -10,6 +10,7 @@ export type UseCanvasBoardOptions = {
   textValue: string;
   pendingImage: PendingImage | null;
   onImagePlaced: () => void;
+  onElementCreated?: (element: CanvasElement) => void;
 };
 
 export type DragEndPosition = { x: number; y: number };
@@ -21,7 +22,8 @@ export const useCanvasBoard = ({
   fontSize,
   textValue,
   pendingImage,
-  onImagePlaced
+  onImagePlaced,
+  onElementCreated
 }: UseCanvasBoardOptions) => {
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const isDrawing = useRef(false);
@@ -40,6 +42,10 @@ export const useCanvasBoard = ({
 
   const handlePointerDown = useCallback(
     (event: KonvaEventObject<PointerEvent>) => {
+      if (tool === 'hand') {
+        return;
+      }
+
       const stage = event.target.getStage();
       const point = stage?.getPointerPosition();
       if (!stage || !point) {
@@ -53,7 +59,7 @@ export const useCanvasBoard = ({
 
       if (tool === 'pen') {
         isDrawing.current = true;
-        addElement({
+        const element: CanvasElement = {
           id: crypto.randomUUID(),
           type: 'pen',
           color: strokeColor,
@@ -61,13 +67,15 @@ export const useCanvasBoard = ({
           points: [point.x, point.y],
           offsetX: 0,
           offsetY: 0
-        });
+        };
+        addElement(element);
+        onElementCreated?.(element);
         return;
       }
 
       if (tool === 'rect') {
         isDrawing.current = true;
-        addElement({
+        const element: CanvasElement = {
           id: crypto.randomUUID(),
           type: 'rect',
           color: strokeColor,
@@ -76,12 +84,14 @@ export const useCanvasBoard = ({
           y: point.y,
           width: 0,
           height: 0
-        });
+        };
+        addElement(element);
+        onElementCreated?.(element);
         return;
       }
 
       if (tool === 'text') {
-        addElement({
+        const element: CanvasElement = {
           id: crypto.randomUUID(),
           type: 'text',
           color: strokeColor,
@@ -89,12 +99,14 @@ export const useCanvasBoard = ({
           x: point.x,
           y: point.y,
           text: textValue
-        });
+        };
+        addElement(element);
+        onElementCreated?.(element);
         return;
       }
 
       if (tool === 'image' && pendingImage) {
-        addElement({
+        const element: CanvasElement = {
           id: crypto.randomUUID(),
           type: 'image',
           x: point.x,
@@ -103,15 +115,21 @@ export const useCanvasBoard = ({
           height: pendingImage.height,
           src: pendingImage.src,
           title: pendingImage.title
-        });
+        };
+        addElement(element);
+        onElementCreated?.(element);
         onImagePlaced();
       }
     },
-    [addElement, fontSize, onImagePlaced, pendingImage, strokeColor, strokeWidth, textValue, tool]
+    [addElement, fontSize, onElementCreated, onImagePlaced, pendingImage, strokeColor, strokeWidth, textValue, tool]
   );
 
   const handlePointerMove = useCallback(
     (event: KonvaEventObject<PointerEvent>) => {
+      if (tool === 'hand') {
+        return;
+      }
+
       if (!isDrawing.current) {
         return;
       }
@@ -176,5 +194,21 @@ export const useCanvasBoard = ({
     );
   }, []);
 
-  return { elements, handlePointerDown, handlePointerMove, handlePointerUp, handleElementDragEnd };
+  const updateElement = useCallback((id: string, updater: (element: CanvasElement) => CanvasElement) => {
+    setElements((prev) => prev.map((element) => (element.id === id ? updater({ ...element }) : element)));
+  }, []);
+
+  const deleteElement = useCallback((id: string) => {
+    setElements((prev) => prev.filter((element) => element.id !== id));
+  }, []);
+
+  return {
+    elements,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handleElementDragEnd,
+    updateElement,
+    deleteElement
+  };
 };

@@ -1,4 +1,4 @@
-import { PencilSimple, Square, TextT, ImageSquare, UploadSimple, Eyedropper } from 'phosphor-react';
+import { Hand, PencilSimple, Square, TextT, ImageSquare, UploadSimple, Eyedropper } from 'phosphor-react';
 import type { ChangeEventHandler, PointerEvent as ReactPointerEvent } from 'react';
 import type { Tool, IconRenderer } from '../types';
 
@@ -27,6 +27,7 @@ export type ToolbarProps = {
 };
 
 const toolOptions: Array<{ value: Tool; label: string; Icon: IconRenderer; helper: string }> = [
+  { value: 'hand', label: 'Hand', Icon: Hand, helper: 'Select & move' },
   { value: 'pen', label: 'Pen', Icon: PencilSimple, helper: 'Freehand' },
   { value: 'rect', label: 'Box', Icon: Square, helper: 'Rectangle' },
   { value: 'text', label: 'Text', Icon: TextT, helper: 'Copy' },

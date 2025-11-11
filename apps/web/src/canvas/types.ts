@@ -1,6 +1,6 @@
 import type { IconProps } from 'phosphor-react';
 
-export type Tool = 'pen' | 'rect' | 'text' | 'image';
+export type Tool = 'hand' | 'pen' | 'rect' | 'text' | 'image';
 
 export type PenElement = {
   id: string;
