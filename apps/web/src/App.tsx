@@ -3,9 +3,10 @@ import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as 
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { CanvasStage } from './canvas/components/CanvasStage';
 import { Toolbar } from './canvas/components/Toolbar';
+import { TextEditor } from './canvas/components/TextEditor';
 import { useCanvasBoard } from './canvas/hooks/useCanvasBoard';
 import { getImageDimensions, readFileAsDataURL } from './canvas/utils/image';
-import type { CanvasElement, CanvasSize, PendingImage, Tool } from './canvas/types';
+import type { CanvasElement, CanvasSize, Tool } from './canvas/types';
 import { MAX_IMAGE_SIZE, NAV_HEIGHT, PANEL_HEIGHT, PANEL_WIDTH } from './canvas/types';
 
 const initialCanvasSize = (): CanvasSize => ({
@@ -37,16 +38,12 @@ export default function App(): JSX.Element {
   const [tool, setTool] = useState<Tool>('pen');
   const [strokeColor, setStrokeColor] = useState('#0f172a');
   const [strokeWidth, setStrokeWidth] = useState(4);
-  const [textValue, setTextValue] = useState('New message');
   const [fontSize, setFontSize] = useState(24);
-  const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>(() => initialCanvasSize());
   const [panelPosition, setPanelPosition] = useState(() => initialPanelPosition());
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
   const dragPanelRef = useRef<{ offsetX: number; offsetY: number; pointerId: number } | null>(null);
-  const textEditorRef = useRef<HTMLTextAreaElement | null>(null);
-  const stageWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const clampPanelPosition = useCallback(
     (x: number, y: number) => {
@@ -73,41 +70,30 @@ export default function App(): JSX.Element {
     setPanelPosition((prev) => clampPanelPosition(prev.x, prev.y));
   }, [clampPanelPosition]);
 
-  useEffect(() => {
-    if (textEditor) {
-      textEditorRef.current?.focus();
-    }
-  }, [textEditor]);
+const handleElementCreated = useCallback((element: CanvasElement) => {
+  if (element.type === 'text') {
+    setTextEditor({ id: element.id, x: element.x, y: element.y, value: element.text, initialValue: element.text });
+  }
+}, []);
 
-  useEffect(() => {
-    if (tool !== 'hand') {
-      setSelectedElementId(null);
-    }
-  }, [tool]);
-
-  const handleImagePlaced = useCallback(() => {
-    setPendingImage(null);
-  }, []);
-
-  const handleElementCreated = useCallback(
-    (element: CanvasElement) => {
-      if (element.type === 'text' && tool === 'text') {
-        setTextEditor({ id: element.id, x: element.x, y: element.y, value: element.text, initialValue: element.text });
-        setSelectedElementId(element.id);
-      }
-    },
-    [tool]
-  );
-
-  const { elements, handlePointerDown: canvasPointerDown, handlePointerMove: canvasPointerMove, handlePointerUp: canvasPointerUp, handleElementDragEnd, updateElement, deleteElement } = useCanvasBoard({
+  const {
+    elements,
+    handlePointerDown: canvasPointerDown,
+    handlePointerMove: canvasPointerMove,
+    handlePointerUp: canvasPointerUp,
+    handleElementDragEnd,
+    updateElement,
+    deleteElement,
+    createTextElement,
+    createImageElement,
+    updateArrowPoints
+  } = useCanvasBoard({
     tool,
     strokeColor,
     strokeWidth,
     fontSize,
-    textValue,
-    pendingImage,
-    onImagePlaced: handleImagePlaced,
-    onElementCreated: handleElementCreated
+    onElementCreated: handleElementCreated,
+    onDrawingComplete: setSelectedElementId
   });
 
   useEffect(() => {
@@ -139,23 +125,17 @@ export default function App(): JSX.Element {
       const dataUrl = await readFileAsDataURL(file);
       const { width, height } = await getImageDimensions(dataUrl);
       const scale = Math.min(1, MAX_IMAGE_SIZE / Math.max(width, height));
+      const scaledWidth = Math.round(width * scale);
+      const scaledHeight = Math.round(height * scale);
+      const centerX = Math.max(0, Math.round(canvasSize.width / 2 - scaledWidth / 2));
+      const centerY = Math.max(0, Math.round(canvasSize.height / 2 - scaledHeight / 2));
 
-      setPendingImage({
-        src: dataUrl,
-        width: Math.round(width * scale),
-        height: Math.round(height * scale),
-        title
-      });
-
-      setTool('image');
+      const element = createImageElement({ x: centerX, y: centerY, width: scaledWidth, height: scaledHeight, src: dataUrl, title });
+      setSelectedElementId(element.id);
       event.target.value = '';
     },
-    []
+    [canvasSize.height, canvasSize.width, createImageElement]
   );
-
-  const handlePendingImageTitleChange = useCallback((title: string) => {
-    setPendingImage((prev) => (prev ? { ...prev, title } : prev));
-  }, []);
 
   const handlePanelPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const handle = (event.target as HTMLElement | null)?.closest('[data-panel-handle="true"]');
@@ -199,7 +179,6 @@ export default function App(): JSX.Element {
         setSelectedElementId((current) => (current === prev.id ? null : current));
       } else {
         updateElement(prev.id, (element) => (element.type === 'text' ? { ...element, text: trimmed } : element));
-        setTextValue(trimmed);
       }
       return null;
     });
@@ -224,17 +203,9 @@ export default function App(): JSX.Element {
     });
   }, [deleteElement, updateElement]);
 
-  const handleTextInputChange = useCallback(
-    (event: ChangeEvent<HTMLTextAreaElement>) => {
-      const value = event.target.value;
-      setTextEditor((prev) => {
-        if (!prev) return prev;
-        updateElement(prev.id, (element) => (element.type === 'text' ? { ...element, text: value } : element));
-        return { ...prev, value };
-      });
-    },
-    [updateElement]
-  );
+  const handleTextInputChange = useCallback((value: string) => {
+    setTextEditor((prev) => (prev ? { ...prev, value } : prev));
+  }, []);
 
   const handleTextInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -259,6 +230,13 @@ export default function App(): JSX.Element {
     [tool]
   );
 
+  const handleArrowPointChange = useCallback(
+    (id: string, part: 'start' | 'end' | 'middle', position: { x: number; y: number }) => {
+      updateArrowPoints(id, part, position);
+    },
+    [updateArrowPoints]
+  );
+
   const handleDeleteSelected = useCallback(() => {
     if (!selectedElementId) {
       return;
@@ -279,18 +257,33 @@ export default function App(): JSX.Element {
         return;
       }
 
-      if (textEditor && tool === 'text') {
+      if (tool === 'text') {
+        const stage = event.target.getStage();
+        const point = stage?.getPointerPosition();
+        if (!stage || !point) {
+          return;
+        }
+        if (textEditor) {
+          commitTextEditor();
+        }
+        const element = createTextElement(point);
+        setTextEditor({ id: element.id, x: element.x, y: element.y, value: element.text, initialValue: element.text });
+        setSelectedElementId(element.id);
+        return;
+      }
+
+      if (textEditor) {
         commitTextEditor();
       }
 
       canvasPointerDown(event);
     },
-    [canvasPointerDown, commitTextEditor, textEditor, tool]
+    [canvasPointerDown, commitTextEditor, createTextElement, textEditor, tool]
   );
 
   const handleStagePointerMove = useCallback(
     (event: KonvaEventObject<PointerEvent>) => {
-      if (tool === 'hand') return;
+      if (tool === 'hand' || tool === 'text') return;
       canvasPointerMove(event);
     },
     [canvasPointerMove, tool]
@@ -301,11 +294,12 @@ export default function App(): JSX.Element {
   }, [canvasPointerUp]);
 
   const navHint = useMemo(() => {
-    if (tool === 'image' && pendingImage) return 'Click the board to drop your asset.';
+    if (tool === 'image') return 'Select an image to drop onto the board.';
     if (tool === 'text') return 'Click anywhere to place text and start typing.';
+    if (tool === 'arrow') return 'Click and drag to draw an arrow.';
     if (tool === 'hand') return 'Select ads to move or delete them.';
     return 'Pick a mode to begin sketching.';
-  }, [pendingImage, tool]);
+  }, [tool]);
 
   return (
     <div className="canvas-app">
@@ -313,7 +307,7 @@ export default function App(): JSX.Element {
         <div className="canvas-app__brand">Post Your Ad – Creator</div>
         <p className="canvas-app__hint">{navHint}</p>
       </header>
-      <div className="canvas-app__stage-wrapper" ref={stageWrapperRef}>
+      <div className={`canvas-app__stage-wrapper${tool === 'hand' ? ' canvas-app__stage-wrapper--hand' : ''}`}>
         <CanvasStage
           size={canvasSize}
           elements={elements}
@@ -324,8 +318,9 @@ export default function App(): JSX.Element {
           onPointerUp={handleStagePointerUp}
           onElementSelect={handleElementSelect}
           onElementDragEnd={handleElementDragEnd}
+          onArrowPointChange={handleArrowPointChange}
         />
-        {tool === 'hand' && selectionBounds && !textEditor ? (
+        {selectionBounds && !textEditor ? (
           <div
             className="selection-overlay"
             style={{
@@ -342,15 +337,19 @@ export default function App(): JSX.Element {
           </div>
         ) : null}
         {textEditor ? (
-          <textarea
-            ref={textEditorRef}
-            className="text-editor"
-            style={{ left: textEditor.x, top: textEditor.y, minWidth: 160 }}
+          <TextEditor
+            x={textEditor.x}
+            y={textEditor.y}
             value={textEditor.value}
             onChange={handleTextInputChange}
-            onBlur={commitTextEditor}
             onKeyDown={handleTextInputKeyDown}
-            placeholder="Type here"
+            onDragEnd={({ x: nextX, y: nextY }) => {
+              setTextEditor((prev) => {
+                if (!prev) return prev;
+                updateElement(prev.id, (element) => (element.type === 'text' ? { ...element, x: nextX, y: nextY } : element));
+                return { ...prev, x: nextX, y: nextY };
+              });
+            }}
           />
         ) : null}
         <Toolbar
@@ -362,13 +361,9 @@ export default function App(): JSX.Element {
           onStrokeColorChange={setStrokeColor}
           strokeWidth={strokeWidth}
           onStrokeWidthChange={setStrokeWidth}
-          textValue={textValue}
-          onTextValueChange={setTextValue}
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
           onFileChange={handleFileChange}
-          pendingImageTitle={pendingImage?.title ?? null}
-          onPendingImageTitleChange={handlePendingImageTitleChange}
           onPointerDown={handlePanelPointerDown}
           onPointerMove={handlePanelPointerMove}
           onPointerUp={handlePanelPointerUp}
@@ -414,6 +409,19 @@ const getElementBounds = (element: CanvasElement): SelectionBounds | null => {
     return {
       x: minX + element.offsetX,
       y: minY + element.offsetY,
+      width: Math.max(24, maxX - minX),
+      height: Math.max(24, maxY - minY)
+    };
+  }
+
+  if (element.type === 'arrow') {
+    const minX = Math.min(element.startX, element.midX, element.endX);
+    const minY = Math.min(element.startY, element.midY, element.endY);
+    const maxX = Math.max(element.startX, element.midX, element.endX);
+    const maxY = Math.max(element.startY, element.midY, element.endY);
+    return {
+      x: minX,
+      y: minY,
       width: Math.max(24, maxX - minX),
       height: Math.max(24, maxY - minY)
     };

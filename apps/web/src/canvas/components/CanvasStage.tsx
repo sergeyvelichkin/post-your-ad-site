@@ -1,4 +1,4 @@
-import { Stage, Layer, Line, Rect, Text as KonvaText } from 'react-konva';
+import { Stage, Layer, Line, Rect, Text as KonvaText, Arrow as KonvaArrow, Circle, Group } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { CanvasElement, CanvasSize, Tool } from '../types';
 import type { DragEndPosition } from '../hooks/useCanvasBoard';
@@ -14,6 +14,7 @@ export type CanvasStageProps = {
   onPointerUp: () => void;
   onElementSelect: (id: string) => void;
   onElementDragEnd: (id: string, position: DragEndPosition) => void;
+  onArrowPointChange: (id: string, part: 'start' | 'end' | 'middle', position: { x: number; y: number }) => void;
 };
 
 export function CanvasStage({
@@ -25,7 +26,8 @@ export function CanvasStage({
   onPointerMove,
   onPointerUp,
   onElementSelect,
-  onElementDragEnd
+  onElementDragEnd,
+  onArrowPointChange
 }: CanvasStageProps): JSX.Element {
   const isHandMode = activeTool === 'hand';
 
@@ -127,6 +129,65 @@ export function CanvasStage({
                 isSelected={isSelected}
                 onSelect={onElementSelect}
               />
+            );
+          }
+
+          if (element.type === 'arrow') {
+            const midX = element.midX;
+            const midY = element.midY;
+            const commonHandleProps = {
+              draggable: isSelected,
+              stroke: '#fff',
+              strokeWidth: 1
+            } as const;
+
+            return (
+              <Group key={element.id}>
+                <KonvaArrow
+                  points={[element.startX, element.startY, element.midX, element.midY, element.endX, element.endY]}
+                  stroke={element.color}
+                  strokeWidth={element.strokeWidth}
+                  pointerWidth={element.strokeWidth * 2}
+                  pointerLength={element.strokeWidth * 2.5}
+                  lineCap="round"
+                  lineJoin="round"
+                  draggable={isHandMode}
+                  onPointerDown={isHandMode ? handleShapePointerDown(element.id) : undefined}
+                  onDragStart={isHandMode ? () => onElementSelect(element.id) : undefined}
+                  onDragEnd={isHandMode ? (event) => onElementDragEnd(element.id, { x: event.target.x(), y: event.target.y() }) : undefined}
+                />
+                {isSelected && isHandMode ? (
+                  <>
+                    <Circle
+                      x={element.startX}
+                      y={element.startY}
+                      radius={8}
+                      fill="#6366f1"
+                      {...commonHandleProps}
+                      onPointerDown={() => onElementSelect(element.id)}
+                      onDragMove={(event) => onArrowPointChange(element.id, 'start', { x: event.target.x(), y: event.target.y() })}
+                    />
+                    <Circle
+                      x={element.endX}
+                      y={element.endY}
+                      radius={8}
+                      fill="#6366f1"
+                      {...commonHandleProps}
+                      onPointerDown={() => onElementSelect(element.id)}
+                      onDragMove={(event) => onArrowPointChange(element.id, 'end', { x: event.target.x(), y: event.target.y() })}
+                    />
+                    <Circle
+                      x={midX}
+                      y={midY}
+                      radius={7}
+                      fill="#a855f7"
+                      {...commonHandleProps}
+                      onPointerDown={() => onElementSelect(element.id)}
+                      onDragMove={(event) => onArrowPointChange(element.id, 'middle', { x: event.target.x(), y: event.target.y() })}
+                    />
+                  </>
+                ) : null}
+              </Group>
             );
           }
 

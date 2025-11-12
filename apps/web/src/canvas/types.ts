@@ -1,6 +1,6 @@
 import type { IconProps } from 'phosphor-react';
 
-export type Tool = 'hand' | 'pen' | 'rect' | 'text' | 'image';
+export type Tool = 'hand' | 'pen' | 'rect' | 'text' | 'image' | 'arrow';
 
 export type PenElement = {
   id: string;
@@ -44,14 +44,20 @@ export type ImageElement = {
   title: string;
 };
 
-export type CanvasElement = PenElement | RectElement | TextElement | ImageElement;
-
-export type PendingImage = {
-  src: string;
-  width: number;
-  height: number;
-  title: string;
+export type ArrowElement = {
+  id: string;
+  type: 'arrow';
+  color: string;
+  strokeWidth: number;
+  startX: number;
+  startY: number;
+  midX: number;
+  midY: number;
+  endX: number;
+  endY: number;
 };
+
+export type CanvasElement = PenElement | RectElement | TextElement | ImageElement | ArrowElement;
 
 export type CanvasSize = {
   width: number;

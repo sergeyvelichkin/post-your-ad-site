@@ -1,4 +1,4 @@
-import { Group, Rect, Text as KonvaText, Image as KonvaImage } from 'react-konva';
+import { Group, Rect, Image as KonvaImage } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import useImage from 'use-image';
 import type { ImageElement } from '../types';
@@ -39,7 +39,6 @@ export function CanvasImage({ image, onDragEnd, isInteractive, isSelected, onSel
         fill="#fff"
       />
       <KonvaImage image={konvaImage ?? undefined} width={image.width} height={image.height} listening={false} />
-      <KonvaText x={0} y={image.height + 8} text={image.title} fontSize={12} fill="#1f2937" />
     </Group>
   );
 }

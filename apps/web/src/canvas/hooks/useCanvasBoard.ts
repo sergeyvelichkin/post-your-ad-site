@@ -1,30 +1,19 @@
 import { useCallback, useRef, useState } from 'react';
 import type { KonvaEventObject } from 'konva/lib/Node';
-import type { CanvasElement, PendingImage, Tool } from '../types';
+import type { CanvasElement, Tool } from '../types';
 
 export type UseCanvasBoardOptions = {
   tool: Tool;
   strokeColor: string;
   strokeWidth: number;
   fontSize: number;
-  textValue: string;
-  pendingImage: PendingImage | null;
-  onImagePlaced: () => void;
   onElementCreated?: (element: CanvasElement) => void;
+  onDrawingComplete?: (elementId: string) => void;
 };
 
 export type DragEndPosition = { x: number; y: number };
 
-export const useCanvasBoard = ({
-  tool,
-  strokeColor,
-  strokeWidth,
-  fontSize,
-  textValue,
-  pendingImage,
-  onImagePlaced,
-  onElementCreated
-}: UseCanvasBoardOptions) => {
+export const useCanvasBoard = ({ tool, strokeColor, strokeWidth, fontSize, onElementCreated, onDrawingComplete }: UseCanvasBoardOptions) => {
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const isDrawing = useRef(false);
   const activeElementId = useRef<string | null>(null);
@@ -42,18 +31,13 @@ export const useCanvasBoard = ({
 
   const handlePointerDown = useCallback(
     (event: KonvaEventObject<PointerEvent>) => {
-      if (tool === 'hand') {
+      if (tool === 'hand' || tool === 'text' || tool === 'image') {
         return;
       }
 
       const stage = event.target.getStage();
       const point = stage?.getPointerPosition();
       if (!stage || !point) {
-        return;
-      }
-
-      const clickedOnBackground = event.target === stage || event.target.getType() === 'Layer';
-      if (!clickedOnBackground && (tool === 'pen' || tool === 'rect')) {
         return;
       }
 
@@ -90,43 +74,31 @@ export const useCanvasBoard = ({
         return;
       }
 
-      if (tool === 'text') {
+      if (tool === 'arrow') {
+        isDrawing.current = true;
         const element: CanvasElement = {
           id: crypto.randomUUID(),
-          type: 'text',
+          type: 'arrow',
           color: strokeColor,
-          fontSize,
-          x: point.x,
-          y: point.y,
-          text: textValue
+          strokeWidth,
+          startX: point.x,
+          startY: point.y,
+          midX: point.x,
+          midY: point.y,
+          endX: point.x,
+          endY: point.y
         };
         addElement(element);
         onElementCreated?.(element);
         return;
       }
-
-      if (tool === 'image' && pendingImage) {
-        const element: CanvasElement = {
-          id: crypto.randomUUID(),
-          type: 'image',
-          x: point.x,
-          y: point.y,
-          width: pendingImage.width,
-          height: pendingImage.height,
-          src: pendingImage.src,
-          title: pendingImage.title
-        };
-        addElement(element);
-        onElementCreated?.(element);
-        onImagePlaced();
-      }
     },
-    [addElement, fontSize, onElementCreated, onImagePlaced, pendingImage, strokeColor, strokeWidth, textValue, tool]
+    [addElement, fontSize, onElementCreated, strokeColor, strokeWidth, tool]
   );
 
   const handlePointerMove = useCallback(
     (event: KonvaEventObject<PointerEvent>) => {
-      if (tool === 'hand') {
+      if (tool === 'hand' || tool === 'text' || tool === 'image') {
         return;
       }
 
@@ -161,14 +133,31 @@ export const useCanvasBoard = ({
           };
         });
       }
+
+      if (tool === 'arrow') {
+        updateActiveElement((element) => {
+          if (element.type !== 'arrow') return element;
+          return {
+            ...element,
+            endX: point.x,
+            endY: point.y,
+            midX: (element.startX + point.x) / 2,
+            midY: (element.startY + point.y) / 2
+          };
+        });
+      }
     },
     [tool, updateActiveElement]
   );
 
   const handlePointerUp = useCallback(() => {
+    const completedId = isDrawing.current ? activeElementId.current : null;
     isDrawing.current = false;
     activeElementId.current = null;
-  }, []);
+    if (completedId && onDrawingComplete) {
+      onDrawingComplete(completedId);
+    }
+  }, [onDrawingComplete]);
 
   const handleElementDragEnd = useCallback((id: string, position: DragEndPosition) => {
     setElements((prev) =>
@@ -182,6 +171,20 @@ export const useCanvasBoard = ({
             ...element,
             offsetX: position.x,
             offsetY: position.y
+          };
+        }
+
+        if (element.type === 'arrow') {
+          const dx = position.x - element.startX;
+          const dy = position.y - element.startY;
+          return {
+            ...element,
+            startX: element.startX + dx,
+            startY: element.startY + dy,
+            midX: element.midX + dx,
+            midY: element.midY + dy,
+            endX: element.endX + dx,
+            endY: element.endY + dy
           };
         }
 
@@ -202,6 +205,70 @@ export const useCanvasBoard = ({
     setElements((prev) => prev.filter((element) => element.id !== id));
   }, []);
 
+  const createTextElement = useCallback(
+    ({ x, y }: { x: number; y: number }) => {
+      const element: CanvasElement = {
+        id: crypto.randomUUID(),
+        type: 'text',
+        color: strokeColor,
+        fontSize,
+        x,
+        y,
+        text: ''
+      };
+      addElement(element);
+      onElementCreated?.(element);
+      return element;
+    },
+    [addElement, fontSize, onElementCreated, strokeColor]
+  );
+
+  const createImageElement = useCallback(
+    ({ x, y, width, height, src, title }: { x: number; y: number; width: number; height: number; src: string; title: string }) => {
+      const element: CanvasElement = {
+        id: crypto.randomUUID(),
+        type: 'image',
+        x,
+        y,
+        width,
+        height,
+        src,
+        title
+      };
+      addElement(element);
+      onElementCreated?.(element);
+      return element;
+    },
+    [addElement, onElementCreated]
+  );
+
+  const updateArrowPoints = useCallback(
+    (id: string, part: 'start' | 'end' | 'middle', position: { x: number; y: number }) => {
+      setElements((prev) =>
+        prev.map((element) => {
+          if (element.id !== id || element.type !== 'arrow') {
+            return element;
+          }
+
+          if (part === 'start') {
+            return { ...element, startX: position.x, startY: position.y };
+          }
+
+          if (part === 'end') {
+            return { ...element, endX: position.x, endY: position.y };
+          }
+
+          return {
+            ...element,
+            midX: position.x,
+            midY: position.y
+          };
+        })
+      );
+    },
+    []
+  );
+
   return {
     elements,
     handlePointerDown,
@@ -209,6 +276,9 @@ export const useCanvasBoard = ({
     handlePointerUp,
     handleElementDragEnd,
     updateElement,
-    deleteElement
+    deleteElement,
+    createTextElement,
+    createImageElement,
+    updateArrowPoints
   };
 };

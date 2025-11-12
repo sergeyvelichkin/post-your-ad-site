@@ -1,4 +1,5 @@
-import { Hand, PencilSimple, Square, TextT, ImageSquare, UploadSimple, Eyedropper } from 'phosphor-react';
+import { Hand, PencilSimple, Square, TextT, ImageSquare, Eyedropper, ArrowRight } from 'phosphor-react';
+import { useRef } from 'react';
 import type { ChangeEventHandler, PointerEvent as ReactPointerEvent } from 'react';
 import type { Tool, IconRenderer } from '../types';
 
@@ -13,13 +14,9 @@ export type ToolbarProps = {
   onStrokeColorChange: (color: string) => void;
   strokeWidth: number;
   onStrokeWidthChange: (width: number) => void;
-  textValue: string;
-  onTextValueChange: (value: string) => void;
   fontSize: number;
   onFontSizeChange: (value: number) => void;
   onFileChange: ChangeEventHandler<HTMLInputElement>;
-  pendingImageTitle: string | null;
-  onPendingImageTitleChange: (value: string) => void;
   dimensions: { width: number; height: number };
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -31,6 +28,7 @@ const toolOptions: Array<{ value: Tool; label: string; Icon: IconRenderer; helpe
   { value: 'pen', label: 'Pen', Icon: PencilSimple, helper: 'Freehand' },
   { value: 'rect', label: 'Box', Icon: Square, helper: 'Rectangle' },
   { value: 'text', label: 'Text', Icon: TextT, helper: 'Copy' },
+  { value: 'arrow', label: 'Arrow', Icon: ArrowRight, helper: 'Pointer' },
   { value: 'image', label: 'Image', Icon: ImageSquare, helper: 'Upload' }
 ];
 
@@ -42,18 +40,23 @@ export function Toolbar({
   onStrokeColorChange,
   strokeWidth,
   onStrokeWidthChange,
-  textValue,
-  onTextValueChange,
   fontSize,
   onFontSizeChange,
   onFileChange,
-  pendingImageTitle,
-  onPendingImageTitleChange,
   dimensions,
   onPointerDown,
   onPointerMove,
   onPointerUp
 }: ToolbarProps): JSX.Element {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleToolSelect = (nextTool: Tool): void => {
+    onToolChange(nextTool);
+    if (nextTool === 'image') {
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
     <div
       className="tool-panel"
@@ -71,7 +74,7 @@ export function Toolbar({
             key={item.value}
             type="button"
             className={`tool-panel__icon-button ${tool === item.value ? 'tool-panel__icon-button--active' : ''}`}
-            onClick={() => onToolChange(item.value)}
+            onClick={() => handleToolSelect(item.value)}
             title={item.helper}
           >
             <item.Icon size={20} weight="bold" aria-hidden="true" />
@@ -104,30 +107,8 @@ export function Toolbar({
             ))}
           </select>
         </div>
-        <input
-          className="tool-panel__text-input"
-          type="text"
-          value={textValue}
-          onChange={(event) => onTextValueChange(event.target.value)}
-          placeholder="Aa"
-          title="Text content"
-        />
-        <label className="tool-panel__icon-button tool-panel__icon-button--upload" title="Upload image">
-          <UploadSimple size={20} weight="bold" aria-hidden="true" />
-          <span className="tool-panel__sr-only">{pendingImageTitle ? 'Replace image' : 'Upload image'}</span>
-          <input type="file" accept="image/*" onChange={onFileChange} />
-        </label>
-        {pendingImageTitle ? (
-          <input
-            className="tool-panel__text-input"
-            type="text"
-            value={pendingImageTitle}
-            onChange={(event) => onPendingImageTitleChange(event.target.value)}
-            placeholder="Image title"
-            title="Image title"
-          />
-        ) : null}
       </div>
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} style={{ display: 'none' }} />
     </div>
   );
 }
